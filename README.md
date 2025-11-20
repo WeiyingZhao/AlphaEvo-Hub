@@ -38,21 +38,110 @@ The platform consists of several core modules:
 
 ## Installation
 
+### Quick Install (Minimal Setup)
+
+For basic usage with OpenAI or Anthropic APIs only (no local models):
+
 ```bash
 # Clone the repository
 git clone https://github.com/WeiyingZhao/AlphaEvo-Hub.git
 cd AlphaEvo-Hub
 
-# Install backend dependencies
+# Install minimal dependencies (without torch/transformers)
+pip install openai anthropic fastapi uvicorn langchain deap numpy scipy \
+    faiss-cpu chromadb sentence-transformers websockets pydantic \
+    sqlalchemy python-dotenv aiofiles python-multipart tinydb
+```
+
+### Full Install (All Features)
+
+For complete functionality including local models and all evolution strategies:
+
+```bash
+# Clone the repository
+git clone https://github.com/WeiyingZhao/AlphaEvo-Hub.git
+cd AlphaEvo-Hub
+
+# Install all dependencies
 pip install -r requirements.txt
 
-# Install frontend dependencies
+# (Optional) Install frontend dependencies
 cd frontend
 npm install
 cd ..
 ```
 
+### Install from Source
+
+```bash
+# Install in development mode
+pip install -e .
+
+# Or install specific dependency groups
+pip install -e ".[dev]"  # Includes testing and dev tools
+```
+
+### Environment Setup
+
+Create a `.env` file for your API keys (optional for demo mode):
+
+```bash
+# For OpenAI
+OPENAI_API_KEY=your-openai-key-here
+
+# For Anthropic
+ANTHROPIC_API_KEY=your-anthropic-key-here
+```
+
 ## Quick Start
+
+### Demo Mode (No API Keys Required!)
+
+Try Agent Evolve immediately without any API keys:
+
+```bash
+python examples/basic_usage.py
+```
+
+This runs in **mock mode** for demonstration and testing purposes.
+
+### With Real LLMs
+
+```python
+from agent_evolve import AgentCore, EvolutionaryOptimizer
+from agent_evolve.evaluator import QAEvaluator
+
+# Set your API key
+import os
+os.environ["OPENAI_API_KEY"] = "your-key-here"
+
+# Create an agent
+agent = AgentCore(
+    model="gpt-3.5-turbo",  # or "claude-3-sonnet-20240229"
+    task="Answer questions accurately"
+)
+
+# Set up evolution
+optimizer = EvolutionaryOptimizer(
+    strategy="prompt_optimization",
+    generations=5
+)
+
+# Define evaluation criteria
+evaluator = QAEvaluator(qa_pairs=[
+    {"question": "What is 2+2?", "answer": "4"},
+    {"question": "Capital of France?", "answer": "Paris"}
+])
+
+# Run evolution
+result = optimizer.evolve(agent, evaluator)
+
+# View results
+print(f"Best Score: {result.best_score:.4f}")
+result.export_report("evolution_report.md")
+```
+
+### Using the Web Interface (Optional)
 
 ```bash
 # Start the backend server
@@ -65,36 +154,83 @@ npm start
 
 Visit `http://localhost:3000` to access the Agent Evolve dashboard.
 
-## Usage
+## Usage Examples
 
-### Basic Example: Evolving a Code Generator
+### 1. Getting Started - No API Keys
 
 ```python
 from agent_evolve import AgentCore, EvolutionaryOptimizer
-from agent_evolve.evaluators import CodeEvaluator
+from agent_evolve.evaluator import QAEvaluator
 
-# Create an agent
+# Use mock LLM for testing (no API key needed)
+agent = AgentCore(model="mock", task="Answer questions")
+
+evaluator = QAEvaluator(qa_pairs=[
+    {"question": "What is 2+2?", "answer": "4"}
+])
+
+optimizer = EvolutionaryOptimizer(strategy="prompt_optimization", generations=3)
+result = optimizer.evolve(agent, evaluator)
+print(f"Evolution complete! Best score: {result.best_score:.4f}")
+```
+
+### 2. Code Evolution with OpenAI
+
+```python
+from agent_evolve import AgentCore, EvolutionaryOptimizer
+from agent_evolve.evaluator import CodeEvaluator
+
+# Create a code-generating agent
 agent = AgentCore(
     model="gpt-3.5-turbo",
-    task="code_generation"
+    task="Write efficient Python code"
 )
 
-# Set up evolution
+# Define test cases
+evaluator = CodeEvaluator(test_cases=[
+    ([1, 2, 3], 6),  # sum([1,2,3]) = 6
+    ([10, 20], 30),   # sum([10,20]) = 30
+])
+
+# Evolve the solution
 optimizer = EvolutionaryOptimizer(
-    strategy="prompt_optimization",
+    strategy="code_evolution",
     generations=10
 )
 
-# Define evaluator
-evaluator = CodeEvaluator(test_cases=[...])
-
-# Run evolution
-results = optimizer.evolve(agent, evaluator)
+result = optimizer.evolve(agent, evaluator)
 
 # Export the best solution
-results.export_code("optimized_solution.py")
-results.export_report("evolution_report.pdf")
+result.export_code("best_solution.py")
+result.export_report("evolution_report.md")
 ```
+
+### 3. Multi-Strategy Evolution
+
+```python
+from agent_evolve import AgentCore, EvolutionaryOptimizer
+from agent_evolve.evaluator import QAEvaluator
+
+agent = AgentCore(model="claude-3-sonnet-20240229")
+evaluator = QAEvaluator(qa_pairs=[...])
+
+# Try different evolution strategies
+strategies = ["prompt_optimization", "memory_evolution", "tool_evolution"]
+
+best_results = {}
+for strategy in strategies:
+    optimizer = EvolutionaryOptimizer(strategy=strategy, generations=5)
+    result = optimizer.evolve(agent, evaluator)
+    best_results[strategy] = result.best_score
+    print(f"{strategy}: {result.best_score:.4f}")
+```
+
+## Supported Models
+
+- **OpenAI**: gpt-3.5-turbo, gpt-4, gpt-4-turbo
+- **Anthropic**: claude-3-sonnet-20240229, claude-3-opus-20240229, claude-3-haiku-20240307
+- **HuggingFace**: llama, mistral, falcon, and other open-source models
+- **Mock**: For testing without API costs
 
 ## Roadmap
 
