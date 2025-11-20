@@ -77,6 +77,8 @@ class AgentCore:
             config = AgentConfig()
         if model:
             config.model_name = model
+            # Auto-detect provider from model name
+            config.model_provider = self._detect_provider(model)
         if task:
             config.metadata["task"] = task
 
@@ -89,6 +91,41 @@ class AgentCore:
         self._initialize_controller()
 
         logger.info(f"AgentCore initialized with model: {config.model_name}")
+
+    def _detect_provider(self, model_name: str) -> str:
+        """
+        Auto-detect LLM provider from model name.
+
+        Args:
+            model_name: The name of the model
+
+        Returns:
+            Provider name (openai, anthropic, huggingface, or mock)
+        """
+        model_lower = model_name.lower()
+
+        # Check for mock
+        if model_lower == "mock" or "mock" in model_lower:
+            return "mock"
+
+        # Check for Anthropic/Claude models
+        if "claude" in model_lower or "anthropic" in model_lower:
+            return "anthropic"
+
+        # Check for common HuggingFace model patterns
+        if any(pattern in model_lower for pattern in [
+            "llama", "mistral", "falcon", "gpt-j", "gpt-neo",
+            "opt-", "bloom", "pythia", "dolly", "vicuna"
+        ]):
+            return "huggingface"
+
+        # Check for OpenAI models (gpt-3.5, gpt-4, etc.)
+        if "gpt" in model_lower or "davinci" in model_lower or "turbo" in model_lower:
+            return "openai"
+
+        # Default to OpenAI if can't detect
+        logger.warning(f"Could not auto-detect provider for model '{model_name}', defaulting to 'openai'")
+        return "openai"
 
     def _initialize_model(self):
         """Initialize the LLM based on configuration."""
