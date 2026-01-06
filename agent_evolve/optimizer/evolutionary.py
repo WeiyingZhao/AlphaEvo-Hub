@@ -5,12 +5,15 @@ Orchestrates the self-improvement loop using various evolution strategies.
 Implements genetic algorithms, reinforcement learning, and other search methods.
 """
 
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional, Callable, TYPE_CHECKING
 from dataclasses import dataclass, field
 import logging
 import random
 import copy
 import json
+
+if TYPE_CHECKING:
+    from agent_evolve.core.llm import BaseLLM
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +179,7 @@ class EvolutionaryOptimizer:
         strategy: str = "prompt_optimization",
         generations: int = 10,
         config: Optional[EvolutionConfig] = None,
-        llm=None
+        llm: Optional["BaseLLM"] = None
     ):
         """
         Initialize evolutionary optimizer.

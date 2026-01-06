@@ -5,7 +5,9 @@
       "Bash(git push:*)",
       "Skill(ralph-wiggum:help)",
       "Bash(/Users/johnwei77/.claude/plugins/cache/claude-plugins-official/ralph-wiggum/dbc4a7733cd4/scripts/setup-ralph-loop.sh:*)",
-      "Bash(python -m pytest:*)"
+      "Bash(python -m pytest:*)",
+      "Bash(flake8:*)",
+      "Skill(frontend-design:frontend-design)"
     ]
   }
 }

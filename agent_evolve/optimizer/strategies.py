@@ -16,11 +16,21 @@ from abc import ABC, abstractmethod
 import logging
 import random
 import copy
+import time
 
 if TYPE_CHECKING:
     from agent_evolve.core.llm import BaseLLM
 
 logger = logging.getLogger(__name__)
+
+# Configurable validation thresholds for LLM-generated content
+MIN_PROMPT_LENGTH = 10  # Minimum characters for a valid prompt
+MAX_PROMPT_LENGTH_MULTIPLIER = 3  # Max result length as multiplier of input
+MIN_CODE_LENGTH = 10  # Minimum characters for valid code
+
+# Retry configuration for LLM calls
+LLM_MAX_RETRIES = 3  # Maximum number of retry attempts
+LLM_RETRY_BASE_DELAY = 1.0  # Base delay in seconds (exponential backoff)
 
 
 class EvolutionStrategy(ABC):
@@ -73,7 +83,9 @@ class EvolutionStrategy(ABC):
 
     def _llm_generate(self, prompt: str, fallback: str) -> str:
         """
-        Generate text using LLM with fallback.
+        Generate text using LLM with fallback and retry logic.
+
+        Implements exponential backoff retry for transient failures.
 
         Args:
             prompt: The prompt to send to the LLM
@@ -85,13 +97,24 @@ class EvolutionStrategy(ABC):
         if self.llm is None:
             return fallback
 
-        try:
-            messages = [{"role": "user", "content": prompt}]
-            response = self.llm.generate(messages)
-            return response.strip() if response else fallback
-        except Exception as e:
-            logger.warning(f"LLM generation failed, using fallback: {e}")
-            return fallback
+        last_error = None
+        for attempt in range(LLM_MAX_RETRIES):
+            try:
+                messages = [{"role": "user", "content": prompt}]
+                response = self.llm.generate(messages)
+                return response.strip() if response else fallback
+            except Exception as e:
+                last_error = e
+                if attempt < LLM_MAX_RETRIES - 1:
+                    delay = LLM_RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(
+                        f"LLM generation failed (attempt {attempt + 1}/{LLM_MAX_RETRIES}), "
+                        f"retrying in {delay}s: {e}"
+                    )
+                    time.sleep(delay)
+
+        logger.warning(f"LLM generation failed after {LLM_MAX_RETRIES} attempts, using fallback: {last_error}")
+        return fallback
 
 
 class PromptEvolutionStrategy(EvolutionStrategy):
@@ -211,7 +234,7 @@ Provide ONLY the rephrased prompt, nothing else."""
         result = self._llm_generate(llm_prompt, fallback)
 
         # Validate the result is reasonable (not empty, not too different in length)
-        if len(result) < 10 or len(result) > len(prompt) * 3:
+        if len(result) < MIN_PROMPT_LENGTH or len(result) > len(prompt) * MAX_PROMPT_LENGTH_MULTIPLIER:
             logger.debug("LLM rephrase result out of bounds, using fallback")
             return fallback
 
@@ -444,7 +467,7 @@ Provide ONLY the modified Python code, no explanations. Keep the same function s
                 result = result[start:end].strip()
 
         # Validate result
-        if len(result) < 10 or "def " not in result:
+        if len(result) < MIN_CODE_LENGTH or "def " not in result:
             logger.debug("LLM code modification invalid, using fallback")
             return fallback
 
