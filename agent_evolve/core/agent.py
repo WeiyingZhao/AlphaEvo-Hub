@@ -62,7 +62,8 @@ class AgentCore:
         self,
         config: Optional[AgentConfig] = None,
         model: Optional[str] = None,
-        task: Optional[str] = None
+        task: Optional[str] = None,
+        _skip_init: bool = False
     ):
         """
         Initialize the Agent Core.
@@ -71,6 +72,7 @@ class AgentCore:
             config: Agent configuration object
             model: Model name (if config not provided)
             task: Task description for the agent
+            _skip_init: Internal flag to skip initialization (for loading from config)
         """
         # Set up configuration
         if config is None:
@@ -85,12 +87,13 @@ class AgentCore:
         self.config = config
         self.state = AgentState()
 
-        # Initialize components
-        self._initialize_model()
-        self._initialize_context_manager()
-        self._initialize_controller()
+        # Initialize components (unless skipped for loading)
+        if not _skip_init:
+            self._initialize_model()
+            self._initialize_context_manager()
+            self._initialize_controller()
 
-        logger.info(f"AgentCore initialized with model: {config.model_name}")
+            logger.info(f"AgentCore initialized with model: {config.model_name}")
 
     def _detect_provider(self, model_name: str) -> str:
         """
@@ -278,10 +281,19 @@ class AgentCore:
                 if hasattr(self.state, key):
                     setattr(self.state, key, value)
 
-        # Reinitialize with new config
+        # Reinitialize all components with new config
         self._initialize_model()
+
+        # Initialize context manager if it doesn't exist
+        if not hasattr(self, 'context_manager'):
+            self._initialize_context_manager()
+
         if self.config.system_prompt:
             self.context_manager.set_system_prompt(self.config.system_prompt)
+
+        # Initialize controller if it doesn't exist
+        if not hasattr(self, 'controller'):
+            self._initialize_controller()
 
     def reset(self):
         """Reset agent state for new task."""

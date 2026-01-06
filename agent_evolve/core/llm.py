@@ -46,10 +46,21 @@ class OpenAILLM(BaseLLM):
         super().__init__(*args, **kwargs)
         try:
             import openai
-            self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.\n"
+                    "You can set it in your code: os.environ['OPENAI_API_KEY'] = 'your-key-here'\n"
+                    "Or create a .env file with: OPENAI_API_KEY=your-key-here\n"
+                    "Get your API key from: https://platform.openai.com/api-keys"
+                )
+            self.client = openai.OpenAI(api_key=api_key)
             logger.info(f"OpenAI client initialized for model: {self.model_name}")
-        except ImportError:
-            raise ImportError("openai package not installed. Run: pip install openai")
+        except ImportError as e:
+            raise ImportError(
+                "OpenAI package not installed.\n"
+                "Install it with: pip install openai"
+            ) from e
 
     def generate(self, messages: List[Dict[str, str]]) -> str:
         """Generate response using OpenAI API."""
@@ -92,10 +103,21 @@ class AnthropicLLM(BaseLLM):
         super().__init__(*args, **kwargs)
         try:
             import anthropic
-            self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "Anthropic API key not found. Please set the ANTHROPIC_API_KEY environment variable.\n"
+                    "You can set it in your code: os.environ['ANTHROPIC_API_KEY'] = 'your-key-here'\n"
+                    "Or create a .env file with: ANTHROPIC_API_KEY=your-key-here\n"
+                    "Get your API key from: https://console.anthropic.com/settings/keys"
+                )
+            self.client = anthropic.Anthropic(api_key=api_key)
             logger.info(f"Anthropic client initialized for model: {self.model_name}")
-        except ImportError:
-            raise ImportError("anthropic package not installed. Run: pip install anthropic")
+        except ImportError as e:
+            raise ImportError(
+                "Anthropic package not installed.\n"
+                "Install it with: pip install anthropic"
+            ) from e
 
     def generate(self, messages: List[Dict[str, str]]) -> str:
         """Generate response using Anthropic API."""
@@ -164,8 +186,13 @@ class HuggingFaceLLM(BaseLLM):
             ).to(self.device)
 
             logger.info(f"HuggingFace model loaded: {self.model_name} on {self.device}")
-        except ImportError:
-            raise ImportError("transformers or torch not installed")
+        except ImportError as e:
+            raise ImportError(
+                "HuggingFace models require torch and transformers packages.\n"
+                "Install them with: pip install torch transformers\n"
+                "Or install all local model support with: pip install agent-evolve[local]\n"
+                "For cloud-only usage (OpenAI/Anthropic), use those providers instead."
+            ) from e
 
     def generate(self, messages: List[Dict[str, str]]) -> str:
         """Generate response using HuggingFace model."""
