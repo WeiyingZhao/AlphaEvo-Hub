@@ -166,13 +166,17 @@ class EvolutionaryOptimizer:
 
     The optimizer runs the evolution loop, generates variants,
     evaluates them, and selects the best performers.
+
+    When an LLM is provided (either directly or via the agent being evolved),
+    strategies will use intelligent LLM-based mutations instead of simple heuristics.
     """
 
     def __init__(
         self,
         strategy: str = "prompt_optimization",
         generations: int = 10,
-        config: Optional[EvolutionConfig] = None
+        config: Optional[EvolutionConfig] = None,
+        llm=None
     ):
         """
         Initialize evolutionary optimizer.
@@ -181,6 +185,8 @@ class EvolutionaryOptimizer:
             strategy: Evolution strategy name
             generations: Number of generations to run
             config: Full evolution configuration
+            llm: Optional LLM instance for intelligent mutations.
+                 If not provided, will try to use the agent's LLM during evolution.
         """
         if config is None:
             config = EvolutionConfig(strategy=strategy, generations=generations)
@@ -190,12 +196,24 @@ class EvolutionaryOptimizer:
         self.best_score = float('-inf')
         self.best_config = None
         self.generation_scores = []
+        self._llm = llm
 
-        # Initialize strategy
-        self.strategy = self._get_strategy(config.strategy)
+        # Strategy will be initialized when evolve() is called to allow
+        # using the agent's LLM if no explicit LLM is provided
+        self._strategy = None
+        self._strategy_name = config.strategy
 
-    def _get_strategy(self, strategy_name: str):
-        """Get evolution strategy by name."""
+    def _get_strategy(self, strategy_name: str, llm=None):
+        """
+        Get evolution strategy by name.
+
+        Args:
+            strategy_name: Name of the strategy
+            llm: Optional LLM for intelligent mutations
+
+        Returns:
+            Initialized strategy instance
+        """
         from agent_evolve.optimizer.strategies import (
             PromptEvolutionStrategy,
             MemoryEvolutionStrategy,
@@ -203,17 +221,25 @@ class EvolutionaryOptimizer:
             CodeEvolutionStrategy
         )
 
-        strategies = {
-            "prompt_optimization": PromptEvolutionStrategy(),
-            "memory_evolution": MemoryEvolutionStrategy(),
-            "tool_evolution": ToolEvolutionStrategy(),
-            "code_evolution": CodeEvolutionStrategy(),
+        strategy_classes = {
+            "prompt_optimization": PromptEvolutionStrategy,
+            "memory_evolution": MemoryEvolutionStrategy,
+            "tool_evolution": ToolEvolutionStrategy,
+            "code_evolution": CodeEvolutionStrategy,
         }
 
-        if strategy_name not in strategies:
+        if strategy_name not in strategy_classes:
             raise ValueError(f"Unknown strategy: {strategy_name}")
 
-        return strategies[strategy_name]
+        return strategy_classes[strategy_name](llm=llm)
+
+    @property
+    def strategy(self):
+        """Get the current strategy instance."""
+        if self._strategy is None:
+            # Initialize without LLM - will be updated in evolve() if agent has LLM
+            self._strategy = self._get_strategy(self._strategy_name, llm=self._llm)
+        return self._strategy
 
     def evolve(
         self,
@@ -236,6 +262,14 @@ class EvolutionaryOptimizer:
         """
         logger.info(f"Starting evolution with strategy: {self.config.strategy}")
         logger.info(f"Generations: {self.config.generations}, Population: {self.config.population_size}")
+
+        # Initialize strategy with LLM if available
+        llm = self._llm or getattr(agent, 'llm', None)
+        if llm is not None:
+            logger.info("Using LLM-based intelligent mutations")
+        else:
+            logger.info("Using heuristic-based mutations (no LLM provided)")
+        self._strategy = self._get_strategy(self._strategy_name, llm=llm)
 
         # Initialize population
         population = self._initialize_population(agent)

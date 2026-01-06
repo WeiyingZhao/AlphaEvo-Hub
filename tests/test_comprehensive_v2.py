@@ -147,18 +147,27 @@ class TestAgentCore:
 
     def test_agent_provider_detection_openai(self):
         """Test provider auto-detection for OpenAI."""
-        agent = AgentCore(model="gpt-3.5-turbo")
-        assert agent.config.model_provider == "openai"
+        # Test detection method directly to avoid API key requirements
+        agent = AgentCore(model="mock", _skip_init=True)
+        assert agent._detect_provider("gpt-3.5-turbo") == "openai"
+        assert agent._detect_provider("gpt-4") == "openai"
+        assert agent._detect_provider("gpt-4-turbo") == "openai"
 
     def test_agent_provider_detection_anthropic(self):
         """Test provider auto-detection for Anthropic."""
-        agent = AgentCore(model="claude-3-sonnet-20240229")
-        assert agent.config.model_provider == "anthropic"
+        # Test detection method directly to avoid API key requirements
+        agent = AgentCore(model="mock", _skip_init=True)
+        assert agent._detect_provider("claude-3-sonnet-20240229") == "anthropic"
+        assert agent._detect_provider("claude-3-opus") == "anthropic"
+        assert agent._detect_provider("anthropic-model") == "anthropic"
 
     def test_agent_provider_detection_huggingface(self):
         """Test provider auto-detection for HuggingFace."""
-        agent = AgentCore(model="llama-7b")
-        assert agent.config.model_provider == "huggingface"
+        # Test detection method directly to avoid API key requirements
+        agent = AgentCore(model="mock", _skip_init=True)
+        assert agent._detect_provider("llama-7b") == "huggingface"
+        assert agent._detect_provider("mistral-7b") == "huggingface"
+        assert agent._detect_provider("falcon-40b") == "huggingface"
 
     def test_agent_generate_response(self):
         """Test agent response generation."""
@@ -472,10 +481,11 @@ class TestRobustness:
 
     def test_invalid_model_provider(self):
         """Test handling of invalid model provider."""
-        # This should default to openai with a warning
-        agent = AgentCore(model="unknown-model-xyz")
-        # Should still create agent, just with default provider
-        assert hasattr(agent, 'llm')
+        # Test detection defaults to openai for unknown models
+        agent = AgentCore(model="mock", _skip_init=True)
+        # Unknown model should default to openai
+        detected = agent._detect_provider("unknown-model-xyz")
+        assert detected == "openai"  # Defaults to openai when unknown
 
 
 # ============================================================================

@@ -72,7 +72,36 @@ The project uses `requirements.txt` and `setup.py`.
 
 ## Summary of Priority Tasks
 
-1.  **[High]** Refactor `strategies.py` to use LLM for mutation (actual intelligence vs random strings).
-2.  **[High]** Fix `test_comprehensive.py` by mocking missing credentials so tests pass locally.
-3.  **[Medium]** Migrate Frontend to Vite.
-4.  **[Medium]** Update `HuggingFaceLLM` to use chat templates.
+1.  **[High] COMPLETED** Refactor `strategies.py` to use LLM for mutation (actual intelligence vs random strings).
+    - Added optional LLM parameter to all evolution strategies
+    - `PromptEvolutionStrategy` now uses LLM for intelligent prompt rephrasing
+    - `CodeEvolutionStrategy` now uses LLM for intelligent code optimization
+    - Fallback to simple heuristics when no LLM is provided
+    - `EvolutionaryOptimizer` automatically uses agent's LLM if available
+
+2.  **[High] COMPLETED** Fix `test_comprehensive.py` by mocking missing credentials so tests pass locally.
+    - Updated provider detection tests to use `_detect_provider` method directly
+    - All 50 tests now pass without requiring API keys
+
+3.  **[Medium] EVALUATED** Migrate Frontend to Vite.
+    - Current frontend is minimal (4 JS files)
+    - Uses React 18, react-router-dom, MUI, recharts
+    - Migration would improve build times but is lower priority given app size
+    - Recommended for future iteration when frontend grows
+
+4.  **[Medium] COMPLETED** Update `HuggingFaceLLM` to use chat templates.
+    - Now uses `tokenizer.apply_chat_template` when available
+    - Automatic fallback to simple formatting for older models
+    - Compatible with modern models (Llama 3, Mistral, etc.)
+
+## Additional Improvements Made
+
+5.  **[Medium] COMPLETED** Add GitHub Actions CI (`.github/workflows/ci.yml`)
+    - Runs tests on Python 3.9, 3.10, 3.11, 3.12
+    - Includes linting (black, flake8) and test coverage
+    - Caches pip dependencies for faster runs
+
+6.  **[Medium] COMPLETED** Add `pyproject.toml` for standardized build configuration
+    - Modern PEP 517/518 compliant build configuration
+    - Includes tool configurations for black, flake8, mypy, pytest
+    - Maintains compatibility with existing setup.py

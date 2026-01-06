@@ -170,7 +170,13 @@ class AnthropicLLM(BaseLLM):
 
 
 class HuggingFaceLLM(BaseLLM):
-    """Hugging Face model integration."""
+    """
+    Hugging Face model integration.
+
+    Uses the tokenizer's chat template when available for proper formatting
+    of chat messages. This ensures compatibility with modern open-source models
+    like Llama 3, Mistral, and others that have specific chat formats.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -185,7 +191,14 @@ class HuggingFaceLLM(BaseLLM):
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
             ).to(self.device)
 
-            logger.info(f"HuggingFace model loaded: {self.model_name} on {self.device}")
+            # Check if tokenizer has chat template support
+            self._has_chat_template = hasattr(self.tokenizer, 'apply_chat_template')
+            if self._has_chat_template:
+                logger.info(f"HuggingFace model loaded with chat template support: {self.model_name}")
+            else:
+                logger.info(f"HuggingFace model loaded (no chat template): {self.model_name}")
+            logger.info(f"Running on device: {self.device}")
+
         except ImportError as e:
             raise ImportError(
                 "HuggingFace models require torch and transformers packages.\n"
@@ -196,7 +209,7 @@ class HuggingFaceLLM(BaseLLM):
 
     def generate(self, messages: List[Dict[str, str]]) -> str:
         """Generate response using HuggingFace model."""
-        # Format messages into prompt
+        # Format messages into prompt using chat template if available
         prompt = self._format_messages(messages)
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
@@ -224,7 +237,33 @@ class HuggingFaceLLM(BaseLLM):
             yield char
 
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Format messages into a single prompt string."""
+        """
+        Format messages into a prompt string.
+
+        Uses the tokenizer's apply_chat_template when available,
+        ensuring proper formatting for modern models (Llama 3, Mistral, etc.).
+        Falls back to simple formatting for older models without chat templates.
+        """
+        if self._has_chat_template:
+            return self._format_with_chat_template(messages)
+        return self._format_simple(messages)
+
+    def _format_with_chat_template(self, messages: List[Dict[str, str]]) -> str:
+        """Format using tokenizer's chat template (recommended for modern models)."""
+        try:
+            # apply_chat_template handles model-specific formatting automatically
+            prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+            return prompt
+        except Exception as e:
+            logger.warning(f"Chat template failed, falling back to simple format: {e}")
+            return self._format_simple(messages)
+
+    def _format_simple(self, messages: List[Dict[str, str]]) -> str:
+        """Simple fallback formatting for models without chat templates."""
         prompt_parts = []
         for msg in messages:
             role = msg["role"]

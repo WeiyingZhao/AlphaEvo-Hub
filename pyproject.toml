@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-evolve"
+version = "0.1.0"
+description = "A general-purpose AI agent platform that continuously self-improves over time"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "AlphaEvo Team", email = "contact@alphaevo.ai"}
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "openai>=1.0.0",
+    "anthropic>=0.3.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "langchain>=0.0.300",
+    "deap>=1.4.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "faiss-cpu>=1.7.4",
+    "chromadb>=0.4.0",
+    "sentence-transformers>=2.2.0",
+    "websockets>=11.0",
+    "python-multipart>=0.0.6",
+    "pydantic>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "tinydb>=4.8.0",
+    "python-dotenv>=1.0.0",
+    "aiofiles>=23.0.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+local = [
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+]
+full = [
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "ray[rllib]>=2.5.0",
+    "docker>=6.1.0",
+    "pyodide-build>=0.23.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.24.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+    "pre-commit>=3.3.0",
+]
+
+[project.scripts]
+agent-evolve = "agent_evolve.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/WeiyingZhao/AlphaEvo-Hub"
+Repository = "https://github.com/WeiyingZhao/AlphaEvo-Hub"
+Issues = "https://github.com/WeiyingZhao/AlphaEvo-Hub/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.mypy_cache
+    | \.pytest_cache
+    | \.venv
+    | build
+    | dist
+    | node_modules
+)/
+'''
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E501", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+    "robustness: Robustness tests",
+]

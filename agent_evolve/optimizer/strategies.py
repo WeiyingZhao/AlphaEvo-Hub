@@ -6,19 +6,41 @@ Implements specific evolution methods for different aspects of agent intelligenc
 - Memory evolution
 - Tool evolution
 - Code evolution
+
+Supports LLM-based evolution for intelligent mutations when an LLM instance is provided,
+with fallback to simple heuristic-based mutations otherwise.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 from abc import ABC, abstractmethod
 import logging
 import random
 import copy
 
+if TYPE_CHECKING:
+    from agent_evolve.core.llm import BaseLLM
+
 logger = logging.getLogger(__name__)
 
 
 class EvolutionStrategy(ABC):
-    """Base class for evolution strategies."""
+    """
+    Base class for evolution strategies.
+
+    Supports optional LLM integration for intelligent mutations.
+    When an LLM is provided, strategies can use it for more sophisticated
+    evolutionary operations instead of simple heuristics.
+    """
+
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        """
+        Initialize evolution strategy.
+
+        Args:
+            llm: Optional LLM instance for intelligent mutations.
+                 If not provided, falls back to heuristic-based mutations.
+        """
+        self.llm = llm
 
     @abstractmethod
     def generate_variant(self, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -49,6 +71,28 @@ class EvolutionStrategy(ABC):
 
         return child
 
+    def _llm_generate(self, prompt: str, fallback: str) -> str:
+        """
+        Generate text using LLM with fallback.
+
+        Args:
+            prompt: The prompt to send to the LLM
+            fallback: Value to return if LLM is unavailable or fails
+
+        Returns:
+            LLM response or fallback value
+        """
+        if self.llm is None:
+            return fallback
+
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            response = self.llm.generate(messages)
+            return response.strip() if response else fallback
+        except Exception as e:
+            logger.warning(f"LLM generation failed, using fallback: {e}")
+            return fallback
+
 
 class PromptEvolutionStrategy(EvolutionStrategy):
     """
@@ -57,11 +101,16 @@ class PromptEvolutionStrategy(EvolutionStrategy):
     Evolves the agent's system prompt to improve performance.
     Uses techniques like:
     - Adding/removing instructions
-    - Rephrasing for clarity
+    - Rephrasing for clarity (LLM-based when available)
     - Adding examples
+
+    When an LLM is provided, uses intelligent rephrasing instead of
+    simple string replacements.
     """
 
-    def __init__(self):
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        super().__init__(llm=llm)
+
         self.prompt_templates = [
             "You are an AI assistant that {objective}. {instructions}",
             "Your task is to {objective}. Follow these guidelines: {instructions}",
@@ -131,8 +180,46 @@ class PromptEvolutionStrategy(EvolutionStrategy):
         return random.choice(modifications)
 
     def _rephrase_prompt(self, prompt: str) -> str:
-        """Rephrase a prompt (simple implementation)."""
-        # In practice, would use LLM to rephrase
+        """
+        Rephrase a prompt using LLM when available.
+
+        Uses intelligent LLM-based rephrasing for meaningful improvements,
+        with fallback to simple string replacements when no LLM is available.
+        """
+        if self.llm is not None:
+            return self._llm_rephrase_prompt(prompt)
+        return self._simple_rephrase_prompt(prompt)
+
+    def _llm_rephrase_prompt(self, prompt: str) -> str:
+        """Use LLM to intelligently rephrase the prompt."""
+        rephrase_instructions = random.choice([
+            "Rewrite this system prompt to be more concise while keeping the same meaning",
+            "Improve this system prompt by making instructions clearer and more specific",
+            "Rephrase this system prompt to encourage step-by-step reasoning",
+            "Optimize this system prompt for accuracy and precision",
+            "Enhance this system prompt with better structure and organization",
+        ])
+
+        llm_prompt = f"""{rephrase_instructions}:
+
+Original prompt:
+{prompt}
+
+Provide ONLY the rephrased prompt, nothing else."""
+
+        fallback = self._simple_rephrase_prompt(prompt)
+        result = self._llm_generate(llm_prompt, fallback)
+
+        # Validate the result is reasonable (not empty, not too different in length)
+        if len(result) < 10 or len(result) > len(prompt) * 3:
+            logger.debug("LLM rephrase result out of bounds, using fallback")
+            return fallback
+
+        logger.debug(f"LLM rephrased prompt: {result[:100]}...")
+        return result
+
+    def _simple_rephrase_prompt(self, prompt: str) -> str:
+        """Simple heuristic-based prompt rephrasing (fallback)."""
         replacements = [
             ("You are", "Act as"),
             ("should", "need to"),
@@ -157,6 +244,9 @@ class MemoryEvolutionStrategy(EvolutionStrategy):
     - Retention thresholds
     - Retrieval strategies
     """
+
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        super().__init__(llm=llm)
 
     def generate_variant(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a memory configuration variant."""
@@ -208,6 +298,9 @@ class ToolEvolutionStrategy(EvolutionStrategy):
     - Tool selection strategies
     """
 
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        super().__init__(llm=llm)
+
     def generate_variant(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a tool configuration variant."""
         variant = copy.deepcopy(config)
@@ -247,10 +340,15 @@ class CodeEvolutionStrategy(EvolutionStrategy):
     Evolves code solutions using genetic programming:
     - Mutating code structure
     - Combining code from successful solutions
-    - Optimizing algorithms
+    - Optimizing algorithms (LLM-based when available)
+
+    When an LLM is provided, uses intelligent code optimization
+    instead of naive string modifications.
     """
 
-    def __init__(self):
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        super().__init__(llm=llm)
+
         self.code_templates = {
             "sorting": """
 def sort_algorithm(arr):
@@ -302,8 +400,59 @@ def search_algorithm(arr, target):
         return mutated
 
     def _modify_code(self, code: str) -> str:
-        """Modify existing code."""
-        # In practice, this would use more sophisticated code generation
+        """
+        Modify existing code using LLM when available.
+
+        Uses intelligent LLM-based code optimization for meaningful improvements,
+        with fallback to simple modifications when no LLM is available.
+        """
+        if self.llm is not None:
+            return self._llm_modify_code(code)
+        return self._simple_modify_code(code)
+
+    def _llm_modify_code(self, code: str) -> str:
+        """Use LLM to intelligently modify/optimize code."""
+        modification_instructions = random.choice([
+            "Optimize this Python code for better performance while maintaining correctness",
+            "Refactor this code to be more readable and maintainable",
+            "Add appropriate error handling to this code",
+            "Improve this code by using more Pythonic idioms",
+            "Optimize this algorithm for better time complexity if possible",
+        ])
+
+        llm_prompt = f"""{modification_instructions}:
+
+```python
+{code}
+```
+
+Provide ONLY the modified Python code, no explanations. Keep the same function signatures."""
+
+        fallback = self._simple_modify_code(code)
+        result = self._llm_generate(llm_prompt, fallback)
+
+        # Clean up result - extract code from markdown if present
+        if "```python" in result:
+            start = result.find("```python") + 9
+            end = result.find("```", start)
+            if end > start:
+                result = result[start:end].strip()
+        elif "```" in result:
+            start = result.find("```") + 3
+            end = result.find("```", start)
+            if end > start:
+                result = result[start:end].strip()
+
+        # Validate result
+        if len(result) < 10 or "def " not in result:
+            logger.debug("LLM code modification invalid, using fallback")
+            return fallback
+
+        logger.debug(f"LLM modified code: {result[:100]}...")
+        return result
+
+    def _simple_modify_code(self, code: str) -> str:
+        """Simple heuristic-based code modification (fallback)."""
         modifications = [
             f"{code}\n# Added optimization",
             code.replace("for", "# for"),  # Comment out loops
@@ -346,6 +495,9 @@ class MultiAgentEvolutionStrategy(EvolutionStrategy):
     - Cooperative agents
     - Competitive agents
     """
+
+    def __init__(self, llm: Optional["BaseLLM"] = None):
+        super().__init__(llm=llm)
 
     def generate_variant(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a multi-agent configuration variant."""

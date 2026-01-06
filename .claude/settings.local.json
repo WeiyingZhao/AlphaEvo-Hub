@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Skill(ralph-wiggum:help)",
+      "Bash(/Users/johnwei77/.claude/plugins/cache/claude-plugins-official/ralph-wiggum/dbc4a7733cd4/scripts/setup-ralph-loop.sh:*)",
+      "Bash(python -m pytest:*)"
+    ]
+  }
+}
