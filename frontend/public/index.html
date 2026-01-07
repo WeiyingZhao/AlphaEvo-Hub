@@ -3,12 +3,51 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#0a0a0f" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="msapplication-navbutton-color" content="#0a0a0f" />
     <meta
       name="description"
-      content="Agent Evolve - Self-Evolving AI Agent Platform"
+      content="AlphaEvo Hub - Self-Evolving AI Agent Platform. Configure and launch evolutionary optimization for intelligent agents."
     />
-    <title>Agent Evolve</title>
+    <meta name="keywords" content="AI, agents, evolution, machine learning, optimization, LLM" />
+    <meta name="author" content="AlphaEvo Team" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AlphaEvo Hub" />
+    <meta property="og:description" content="Self-Evolving AI Agent Platform" />
+
+    <title>AlphaEvo Hub</title>
+
+    <style>
+      /* Critical CSS for initial load */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #0a0a0f;
+        color: #e8e8e8;
+      }
+
+      /* Loading animation */
+      #root:empty::before {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(0, 245, 212, 0.1);
+        border-top-color: #00f5d4;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
