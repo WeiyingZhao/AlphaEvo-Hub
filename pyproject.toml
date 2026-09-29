@@ -9,7 +9,7 @@ description = "A general-purpose AI agent platform that continuously self-improv
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "AlphaEvo Team", email = "contact@alphaevo.ai"}
+    {name = "AlphaEvo Team"}
 ]
 requires-python = ">=3.9"
 classifiers = [

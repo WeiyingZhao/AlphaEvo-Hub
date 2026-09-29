@@ -80,3 +80,6 @@ detailed_evolution_report.md
 temp/
 tmp/
 *.tmp
+
+# Claude Code local settings (machine-specific, may contain local paths)
+.claude/settings.local.json
