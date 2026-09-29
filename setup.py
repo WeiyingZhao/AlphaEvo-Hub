@@ -7,7 +7,6 @@ setup(
     name="agent-evolve",
     version="0.1.0",
     author="AlphaEvo Team",
-    author_email="contact@alphaevo.ai",
     description="A general-purpose AI agent platform that continuously self-improves over time",
     long_description=long_description,
     long_description_content_type="text/markdown",
